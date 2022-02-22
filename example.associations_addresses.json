@@ -1,0 +1,16 @@
+{
+	"bde" : {
+		"official name" : "Bureau des élèves", 
+		"address" : "1, rue de la République, 75015 Paris" 
+	},
+
+	"bda" : {
+		"official name" : "Bureau des Arts", 
+		"address" : "1, rue de la République, 75015 Paris" 
+	},
+
+	"bds" : {
+		"official name" : "Bureau des Sports", 
+		"address" : "1, rue de la République, 75015 Paris" 
+	}
+}
