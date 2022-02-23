@@ -3,7 +3,7 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from typing import List
+from typing import List, Dict
 import string
 from dotenv import load_dotenv
 
@@ -16,9 +16,7 @@ SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 
 # data ranges
 FEATURES_LINE_RANGE = 'A2:R2'
-ENTRY_TYPE_COL = 2
-ASSO_NAME_COL_INDEX = 4
-TOT_PRINT_PRICE_COL_INDEX = 11
+ALL_RANGE = "A:S"
 
 # CSD services
 SERVICES_DATA = [{"designation": "Impression affiche A1", "price": 4.0},
@@ -58,14 +56,49 @@ def get_spreadsheet(creds):
     return sheet
 
 
-
-
 # data fetching
 
-def find_column_index(column_name: str, sheet) -> int:
+def fetch_all_data(sheet, column_idx) -> List[Dict[str, str]]:
+    """Retrieves all the relevant data of the spreadsheet to limit the number of requests to a minimum.
+       Later : return a numpy array
+
+    Args:
+        sheet (_type_): googleapiclient spreadsheets object
+
+    Returns:
+        A list of dictionnaries that represent lines 
+    """
+    # fetch all the lines data
+    data = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=ALL_RANGE).execute()['values']
+    
+    # remove headers / columns names
+    col_names = data[1]
+    
+    # strip the headers and empty end lines
+    i=3
+    while data[i][0]:
+        i+=1
+    first_empty_line = i
+    data = data[2:first_empty_line]
+    
+    # convert to dictionnary, with the relevant data
+    data_dicts = []
+    for line in data:
+        line_dict = {}
+        for col_name in column_idx:
+            col_id = column_idx[col_name]
+            # if a cell is empty for a col :
+            if col_id >= len(line):
+                line_dict[col_name] = ""
+            else:
+                line_dict[col_name] = line[col_id]
+        data_dicts.append(line_dict)
+
+    return data_dicts
+
+
+def find_column_index(columns_names, column_name: str) -> int:
     """Returns the index of the column corresponding to the input name"""
-    columns_names = sheet.values().get(spreadsheetId=SPREADSHEET_ID,
-                                       range=FEATURES_LINE_RANGE).execute()['values'][0]
     for col_nb, col_name in enumerate(columns_names):
         if col_name == column_name:
             return col_nb
@@ -74,9 +107,11 @@ def find_column_index(column_name: str, sheet) -> int:
 
 def get_all_col_indexes(sheet):
     """Returns a dictionnary of all the used columns in the spreadsheet"""
+    columns_names = sheet.values().get(spreadsheetId=SPREADSHEET_ID,
+                                    range=FEATURES_LINE_RANGE).execute()['values'][0]
     col_indexes = {}
-    for col_name in ["Date", "Type", "Bénéficiaire", "Prix total", "№ facture", "A1"]:
-        col_indexes[col_name] = find_column_index(col_name, sheet)
+    for col_name in ["Date", "Type", "Bénéficiaire", "A1", "A2", "A3", "Sticker", "T-shirt", "Prix total", "№ facture"]:
+        col_indexes[col_name] = find_column_index(columns_names, col_name)
     return col_indexes
 
 
