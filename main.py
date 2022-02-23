@@ -6,6 +6,7 @@ from tqdm import tqdm
 import receipt_creation as rc
 import receipt_utils as ru
 import spreadsheet_utils as su
+import utils as ut
 
 # TODO:
 # - when counting the lines for an association, only count those without a receipt
@@ -24,18 +25,25 @@ def main(args):
 
     if args.summary:
         print("----- Summary of the spreadsheet -----\n")
-        nor_rec_lines = su.get_no_receipt_lines(spreadsheet, col_indexes)
-        nb_lines_by_recipient = {}
-        for line in tqdm(nor_rec_lines):
-            orders_list, total_print_price, recipient_name = su.get_order_data(
-                line, spreadsheet, col_indexes)
-            if recipient_name not in nb_lines_by_recipient:
-                nb_lines_by_recipient[recipient_name] = 1
-            else:
-                nb_lines_by_recipient[recipient_name] += 1
-            # print(f"Line {line}: {recipient_name}, {total_print_price}")
-        for recipient in nb_lines_by_recipient:
-            print(f"{recipient} ({nb_lines_by_recipient[recipient]} orders)")
+
+        colunms_index = su.get_all_col_indexes(spreadsheet)
+        data = su.fetch_all_data(spreadsheet, colunms_index)
+        filtered_data = ut.filter_orders(data)
+
+        print(f"{len(filtered_data)} commandes sans factures.")
+
+        # nor_rec_lines = su.get_no_receipt_lines(spreadsheet, col_indexes)
+        # nb_lines_by_recipient = {}
+        # for line in tqdm(nor_rec_lines):
+        #     orders_list, total_print_price, recipient_name = su.get_order_data(
+        #         line, spreadsheet, col_indexes)
+        #     if recipient_name not in nb_lines_by_recipient:
+        #         nb_lines_by_recipient[recipient_name] = 1
+        #     else:
+        #         nb_lines_by_recipient[recipient_name] += 1
+        #     # print(f"Line {line}: {recipient_name}, {total_print_price}")
+        # for recipient in nb_lines_by_recipient:
+        #     print(f"{recipient} ({nb_lines_by_recipient[recipient]} orders)")
 
     # if an association was given
     elif args.association:
