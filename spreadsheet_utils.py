@@ -110,7 +110,7 @@ def get_all_col_indexes(sheet):
     columns_names = sheet.values().get(spreadsheetId=SPREADSHEET_ID,
                                     range=FEATURES_LINE_RANGE).execute()['values'][0]
     col_indexes = {}
-    for col_name in ["Date", "Type", "Bénéficiaire", "A1", "A2", "A3", "Sticker", "T-shirt", "Prix total", "№ facture"]:
+    for col_name in ["Date", "Type", "Bénéficiaire", "A1", "A2", "A3", "Sticker", "T-shirt", "Prix total", "№ facture", "Encaissement"]:
         col_indexes[col_name] = find_column_index(columns_names, col_name)
     return col_indexes
 
