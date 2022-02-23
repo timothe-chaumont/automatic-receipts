@@ -58,14 +58,6 @@ def get_spreadsheet(creds):
     return sheet
 
 
-def check_spreadsheet_not_changed(sheet):
-    """Checks useful columns names to see if the spreadsheet strcuture hasn't changed """
-    data_to_check = ((2, "Type"), (4, "Bénéficiaire"), (6, "A1"), (7, "A2"), (8, "A3"),
-                     (9, "Sticker"), (10, "T-shirt"), (11, "Prix total"))
-    columns_names = sheet.values().get(spreadsheetId=SPREADSHEET_ID,
-                                       range=FEATURES_LINE_RANGE).execute()['values'][0]
-    for col_nb, col_name in data_to_check:
-        assert columns_names[col_nb] == col_name, f"The column {col_nb} should correspond to {col_name}, but is {columns_names[col_nb]}"
 
 
 # data fetching
