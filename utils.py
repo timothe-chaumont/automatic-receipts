@@ -1,6 +1,17 @@
-""" General utility functions (data transformation) """
+""" General utility functions (data transformation & email sending) """
 
-from typing import Dict
+from typing import Dict, List
+from dotenv import load_dotenv
+import os
+import smtplib
+from email.message import EmailMessage
+
+# loads environment variables from .env file
+load_dotenv(encoding='utf8')
+
+SENDER_EMAIL = os.getenv('SENDER_EMAIL')
+APP_PASSWORD = os.getenv('APP_PASSWORD')
+CSDESIGN_TRESURER = os.getenv('CSD_TRESURER_NAME')
 
 
 def filter_orders(data: Dict[str, str]) -> Dict[str, str]:
@@ -10,3 +21,25 @@ def filter_orders(data: Dict[str, str]) -> Dict[str, str]:
         if line["Type"] == "Prestation" and line["№ facture"] == "" and line["Encaissement"] == "":
             filtered_data.append(line)
     return filtered_data
+
+
+def send_receipts_by_mail(recipient_first_name: str, recipient_email: str, asso_name:str, receipts_numbers: List[str], orders_data: List[Dict[str, str]]):
+    """Sends the receipts by email to an association"""
+    subject = "Facture(s) CS Design"
+    content = f"Hello {recipient_first_name},\n\n{len(receipts_numbers)} prestation(s) ont été réalisées par CS Design pour l'association {asso_name} :\n"
+    
+    # add all receipts details
+    for order in orders_data:
+        content += f"- {order['Date']} : {order['Description']}, {order['Prix total']}\n"
+
+    content += "\nTu trouveras en pièces jointes les factures correspondantes.\n\n"\
+            + f"Bonne journée,\n{CSDESIGN_TRESURER}\nTrésorier de CS Design"
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = SENDER_EMAIL
+    msg['To'] = recipient_email
+    msg.set_content(content)
+
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+        smtp.login(SENDER_EMAIL, APP_PASSWORD)
+        smtp.send_message(msg)
