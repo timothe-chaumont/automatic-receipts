@@ -12,7 +12,7 @@ load_dotenv(encoding='utf8')
 SENDER_EMAIL = os.getenv('SENDER_EMAIL')
 APP_PASSWORD = os.getenv('APP_PASSWORD')
 CSDESIGN_TRESURER = os.getenv('CSD_TRESURER_NAME')
-
+CSD_TRESURER_PHONE = os.getenv('CSD_TRESURER_PHONE')
 
 def filter_orders(data: Dict[str, str]) -> Dict[str, str]:
     filtered_data = []
@@ -21,6 +21,15 @@ def filter_orders(data: Dict[str, str]) -> Dict[str, str]:
         if line["Type"] == "Prestation" and line["№ facture"] == "" and line["Encaissement"] == "":
             filtered_data.append(line)
     return filtered_data
+
+
+def get_asso_lines(data_dicts, asso_name):
+    """Filters the lines to return only those corresponding to an association"""
+    asso_lines = []
+    for line in data_dicts:
+        if line["Bénéficiaire"].lower() == asso_name.lower():
+            asso_lines.append(line)
+    return asso_lines
 
 
 def send_receipts_by_mail(recipient_first_name: str, recipient_email: str, asso_name:str, receipts_paths: List[str], orders_data: List[Dict[str, str]]):
@@ -34,7 +43,7 @@ def send_receipts_by_mail(recipient_first_name: str, recipient_email: str, asso_
         content += f"- {order['Date']} : {order['Description']}, {order['Prix total']}\n"
 
     content += "\nTu trouveras en pièces jointes les factures correspondantes.\n\n"\
-            + f"Bonne journée,\n{CSDESIGN_TRESURER}\nTrésorier de CS Design"
+            + f"Bonne journée,\n{CSDESIGN_TRESURER}\nTrésorier de CS Design\n{CSD_TRESURER_PHONE}"
     msg = EmailMessage()
     msg['Subject'] = subject
     msg['From'] = SENDER_EMAIL
