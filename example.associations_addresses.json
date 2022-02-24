@@ -1,16 +1,22 @@
 {
 	"bde" : {
 		"official name" : "Bureau des élèves", 
-		"address" : "1, rue de la République, 75015 Paris" 
+		"address" : "1, rue de la République, 75015 Paris",
+		"tresurer first name" : "Jean",
+		"tresurer mail" : "jean.dupont@gmail.com" 
 	},
 
 	"bda" : {
 		"official name" : "Bureau des Arts", 
-		"address" : "1, rue de la République, 75015 Paris" 
+		"address" : "1, rue de la République, 75015 Paris",
+		"tresurer first name" : "Alice",
+		"tresurer mail" : "alice.paul@gmail.com" 
 	},
 
 	"bds" : {
 		"official name" : "Bureau des Sports", 
-		"address" : "1, rue de la République, 75015 Paris" 
+		"address" : "1, rue de la République, 75015 Paris",
+		"tresurer first name" : "Pierre",
+		"tresurer mail" : "pierre.dubois@gmail.com" 
 	}
 }
