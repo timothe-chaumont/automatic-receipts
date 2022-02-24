@@ -48,21 +48,34 @@ def main(args):
     # if an association was given
     elif args.association:
         asso_name = " ".join(args.association)
-        # find lines corresponding to Hyris's orders
+
+        # find lines corresponding to the association orders
+        # fist, get all the lines
+        data = su.fetch_all_data(spreadsheet, col_indexes)
+        # then keep only the orders
+        filtered_data = ut.filter_orders(data)
+        # then keep only the orders of the given association
+        asso_data = ut.get_asso_lines(filtered_data, asso_name)
+
         entry_lines = su.find_lines(
             asso_name, spreadsheet, col_indexes["Bénéficiaire"])
+
         print(f"{len(entry_lines)} ligne(s) trouvée(s) pour {asso_name}.")
+
+        # store the paths to send them by email
+        receipts_paths = []
 
         for line in entry_lines:
             # check if the receipt has already been created
             if not su.has_receipt(line, spreadsheet, col_indexes):
 
+                # later refactor to use the data already fetched
                 orders_list, total_print_price, recipient_name = su.get_order_data(
                     line, spreadsheet, col_indexes)
-                asso_name, asso_address = ru.get_asso_address(recipient_name)
+                asso_official_name, asso_address, tresurer_first_name, tresurer_email = ru.get_asso_address(recipient_name)
                 receipt_nb = ru.get_receipt_number()
 
-                recipient_info = asso_name + "\n" + asso_address
+                recipient_info = asso_official_name + "\n" + asso_address
                 docx_file_name = rc.build_receipt_path(
                     ru.RECEIPTS_PATH, ru.get_this_months_dir_name(), receipt_nb + ".docx")
 
@@ -73,10 +86,17 @@ def main(args):
                 # export to pdf
                 rc.export_receipt_to_pdf(docx_file_name, pdf_file_name)
                 print(f"Facture {receipt_nb} générée.")
+                receipts_paths.append(pdf_file_name)
 
                 # update the spreadsheet
                 su.write_receipt_number(
                     receipt_nb, line, spreadsheet, col_indexes)
+        
+        # if there are receipts to send
+        if args.mail and asso_data != []:
+            # send an email with the receipts attached
+            ut.send_receipts_by_mail(tresurer_first_name, tresurer_email, recipient_name, receipts_paths, asso_data)
+            print(f"Email sent to {tresurer_email}")
 
 
 if __name__ == '__main__':
@@ -84,6 +104,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--association", help="Process all entries for the given association.",
                         type=str, nargs="+")  # at least one word
+    parser.add_argument("-m", "--mail", help="Send automatically the receipts by email.",
+                    action='store_true')  # no arguments
     parser.add_argument("-s", "--summary", help="Prints a description of the current state of the spreadsheet.",
                         action='store_true')  # no arguments needed
     args = parser.parse_args()

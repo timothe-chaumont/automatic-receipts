@@ -14,13 +14,13 @@ RECEIPTS_PATH = os.getenv('RECEIPTS_PATH')
 def get_asso_address(asso_name: str):
     """Returns the address of the association"""
     # read the json file
-    with open("associations_adresses.json", "r", encoding='utf-8') as f:
+    with open("associations_addresses.json", "r", encoding='utf-8') as f:
         data_dict = json.load(f)
     if asso_name.lower() not in data_dict:
         raise Exception(
             f"{asso_name}'s official name and address not found in the json file")
     asso_data = data_dict[asso_name.lower()]
-    return asso_data["official name"], asso_data["address"]
+    return asso_data["official name"], asso_data["address"], asso_data["tresurer first name"], asso_data["tresurer mail"]
 
 
 def get_this_months_dir_name():
