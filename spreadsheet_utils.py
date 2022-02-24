@@ -110,7 +110,7 @@ def get_all_col_indexes(sheet):
     columns_names = sheet.values().get(spreadsheetId=SPREADSHEET_ID,
                                     range=FEATURES_LINE_RANGE).execute()['values'][0]
     col_indexes = {}
-    for col_name in ["Date", "Type", "Bénéficiaire", "A1", "A2", "A3", "Sticker", "T-shirt", "Prix total", "№ facture", "Encaissement"]:
+    for col_name in ["Date", "Type", "Bénéficiaire", "Contact eventuel", "Description", "A1", "A2", "A3", "Sticker", "T-shirt", "Prix total", "№ facture", "Encaissement"]:
         col_indexes[col_name] = find_column_index(columns_names, col_name)
     return col_indexes
 
@@ -225,4 +225,3 @@ def write_receipt_number(receipt_nb: str, line: int, sheet, columns_idx):
 if __name__ == '__main__':
     creds = connect_to_spreadsheet()
     sheet = get_spreadsheet(creds)
-    check_spreadsheet_not_changed(sheet)
