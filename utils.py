@@ -23,10 +23,11 @@ def filter_orders(data: Dict[str, str]) -> Dict[str, str]:
     return filtered_data
 
 
-def send_receipts_by_mail(recipient_first_name: str, recipient_email: str, asso_name:str, receipts_numbers: List[str], orders_data: List[Dict[str, str]]):
+def send_receipts_by_mail(recipient_first_name: str, recipient_email: str, asso_name:str, receipts_paths: List[str], orders_data: List[Dict[str, str]]):
     """Sends the receipts by email to an association"""
+    
     subject = "Facture(s) CS Design"
-    content = f"Hello {recipient_first_name},\n\n{len(receipts_numbers)} prestation(s) ont été réalisées par CS Design pour l'association {asso_name} :\n"
+    content = f"Hello {recipient_first_name},\n\n{len(orders_data)} prestation(s) ont été réalisées par CS Design pour l'association {asso_name} :\n"
     
     # add all receipts details
     for order in orders_data:
@@ -39,6 +40,12 @@ def send_receipts_by_mail(recipient_first_name: str, recipient_email: str, asso_
     msg['From'] = SENDER_EMAIL
     msg['To'] = recipient_email
     msg.set_content(content)
+
+    # add pdf receipts as attachments
+    for receipt in receipts_paths:
+        with open(receipt, 'rb') as f:
+            file_data = f.read()
+        msg.add_attachment(file_data, maintype="application", subtype="pdf", filename=receipt.split("\\")[-1])
 
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
         smtp.login(SENDER_EMAIL, APP_PASSWORD)
