@@ -29,20 +29,42 @@ def main(args):
         data = su.fetch_all_data(spreadsheet, colunms_index)
         filtered_data = ut.filter_orders(data)
 
-        print(f"{len(filtered_data)} commandes sans factures.")
+        print(f"{len(filtered_data)} commandes sans factures ni paiement:")
+        # count the number of ~unpaid receipts for associations and individuals
+        nb_asso_filtered_receipt = len(list(1 for i in range(
+            len(filtered_data)) if filtered_data[i]['Inté / Exté'] == 'Asso'))
+        nb_person_filtered_receipt = len(list(1 for i in range(
+            len(filtered_data)) if filtered_data[i]['Inté / Exté'] == 'Inté'))
+        print(f" - {nb_asso_filtered_receipt} pour des assos.")
+        print(f" - {nb_person_filtered_receipt} pour des personnes.")
 
-        # nor_rec_lines = su.get_no_receipt_lines(spreadsheet, col_indexes)
-        # nb_lines_by_recipient = {}
-        # for line in tqdm(nor_rec_lines):
-        #     orders_list, total_print_price, recipient_name = su.get_order_data(
-        #         line, spreadsheet, col_indexes)
-        #     if recipient_name not in nb_lines_by_recipient:
-        #         nb_lines_by_recipient[recipient_name] = 1
-        #     else:
-        #         nb_lines_by_recipient[recipient_name] += 1
-        #     # print(f"Line {line}: {recipient_name}, {total_print_price}")
-        # for recipient in nb_lines_by_recipient:
-        #     print(f"{recipient} ({nb_lines_by_recipient[recipient]} orders)")
+        # print the top associations with the most unpaid orders
+        print("\n----- Top associations -----\n")
+
+        # get the top associations
+        assos = dict()
+        for i, line in enumerate(filtered_data):
+            if line['Inté / Exté'] == 'Asso':
+                assos[line['Bénéficiaire']] = assos.get(
+                    line['Bénéficiaire'], 0) + 1
+        assos = sorted(assos.items(), key=lambda x: x[1], reverse=True)
+        for i in range(5):
+            print(f"{i+1}. {assos[i][0]} ({assos[i][1]} commandes)")
+
+        # print the top individuals with the most unpaid orders
+        print("\n----- Top individuals -----\n")
+
+        # get the top individuals
+        individuals = dict()
+        for i, line in enumerate(filtered_data):
+            if line['Inté / Exté'] == 'Inté':
+                individuals[line['Bénéficiaire']] = individuals.get(
+                    line['Bénéficiaire'], 0) + 1
+        individuals = sorted(individuals.items(),
+                             key=lambda x: x[1], reverse=True)
+        for i in range(5):
+            print(
+                f"{i+1}. {individuals[i][0]} ({individuals[i][1]} commandes)")
 
     # if an association was given
     elif args.association:
@@ -71,9 +93,11 @@ def main(args):
                 # later refactor to use the data already fetched
                 orders_list, total_print_price, recipient_name = su.get_order_data(
                     line, spreadsheet, col_indexes)
-                asso_official_name, asso_address, tresurer_first_name, tresurer_email = ru.get_asso_address(recipient_name)
+                asso_official_name, asso_address, tresurer_first_name, tresurer_email = ru.get_asso_address(
+                    recipient_name)
                 # get the already created receipt numbers
-                sheet_receipt_names = set(data[i]["№ facture"] for i in range(len(data)))
+                sheet_receipt_names = set(
+                    data[i]["№ facture"] for i in range(len(data)))
                 receipt_nb = ru.get_receipt_number(sheet_receipt_names)
 
                 recipient_info = asso_official_name + "\n" + asso_address
@@ -92,11 +116,12 @@ def main(args):
                 # update the spreadsheet
                 su.write_receipt_number(
                     receipt_nb, line, spreadsheet, col_indexes)
-        
+
         # if there are receipts to send
         if args.mail and asso_data != []:
             # send an email with the receipts attached
-            ut.send_receipts_by_mail(tresurer_first_name, tresurer_email, recipient_name, receipts_paths, asso_data)
+            ut.send_receipts_by_mail(
+                tresurer_first_name, tresurer_email, recipient_name, receipts_paths, asso_data)
             print(f"Email sent to {tresurer_email}")
 
 
@@ -106,7 +131,7 @@ if __name__ == '__main__':
     parser.add_argument("-a", "--association", help="Process all entries for the given association.",
                         type=str, nargs="+")  # at least one word
     parser.add_argument("-m", "--mail", help="Send automatically the receipts by email.",
-                    action='store_true')  # no arguments
+                        action='store_true')  # no arguments
     parser.add_argument("-s", "--summary", help="Prints a description of the current state of the spreadsheet.",
                         action='store_true')  # no arguments needed
     args = parser.parse_args()
