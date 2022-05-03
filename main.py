@@ -12,7 +12,6 @@ import utils as ut
 # - when counting the lines for an association, only count those without a receipt
 # - add a function to list all the associations and their orders with no receipt (or not paid)
 # - add space before euro symbol receipt
-# - send email automatically
 
 
 def main(args):
@@ -73,7 +72,9 @@ def main(args):
                 orders_list, total_print_price, recipient_name = su.get_order_data(
                     line, spreadsheet, col_indexes)
                 asso_official_name, asso_address, tresurer_first_name, tresurer_email = ru.get_asso_address(recipient_name)
-                receipt_nb = ru.get_receipt_number()
+                # get the already created receipt numbers
+                sheet_receipt_names = set(data[i]["№ facture"] for i in range(len(data)))
+                receipt_nb = ru.get_receipt_number(sheet_receipt_names)
 
                 recipient_info = asso_official_name + "\n" + asso_address
                 docx_file_name = rc.build_receipt_path(

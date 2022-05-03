@@ -1,6 +1,7 @@
 import datetime as dt
 import os
 import json
+from typing import Set
 from dotenv import load_dotenv
 
 # loads environment variables from .env file
@@ -36,9 +37,14 @@ def get_receipt_name(dir_name, receipt_number):
     return dir_name + "-" + str_number
 
 
-def get_receipt_number(receipts_dir: str = RECEIPTS_PATH) -> str:
+def get_receipt_number(sheet_receipts_names: Set[str], receipts_dir: str = RECEIPTS_PATH) -> str:
     """Checks how many receipts have been created this month (if any)
-    and returns the number (/ name) of the next receipt to be done 
+        and returns the number (/ name) of the next receipt to be done
+
+        Now also checks the numbers written on the sheets of the receipts
+
+        Args:
+            sheet_receipts_names (Set[str]): the list of the names of the receipts written in the online sheet
     """
     # list all the receipts directories in the path
     month_dirs = os.listdir(receipts_dir)
@@ -54,13 +60,23 @@ def get_receipt_number(receipts_dir: str = RECEIPTS_PATH) -> str:
             if ".pdf" in file_name:  # do not use .docx files
                 if int(file_name.split(".pdf")[0][-2:]) > max_number:
                     max_number += 1
-        next_r_name = get_receipt_name(todays_dir_name, max_number + 1)
+        receipt_number = max_number + 1
+        next_r_name = get_receipt_name(todays_dir_name, receipt_number)
     else:
         # create a new directory
         os.mkdir(os.path.join(RECEIPTS_PATH, todays_dir_name))
         print(f"Directory {todays_dir_name} created")
         # get the first receipt's name
-        next_r_name = get_receipt_name(todays_dir_name, 1)
+        receipt_number = 1
+        next_r_name = get_receipt_name(todays_dir_name, receipt_number)
+
+    # check if this receipt number is not already used in the sheet
+    # (find the first one which number is not used)
+    while next_r_name in sheet_receipts_names:
+        receipt_number += 1
+        next_r_name = get_receipt_name(
+            todays_dir_name, receipt_number)
+
     return next_r_name
 
 

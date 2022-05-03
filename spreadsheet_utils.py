@@ -37,9 +37,10 @@ def connect_to_spreadsheet(scopes=SCOPES):
         creds = Credentials.from_authorized_user_file('token.json', scopes)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
+        # if creds and creds.expired and creds.refresh_token:
+        try:
             creds.refresh(Request())
-        else:
+        except:
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', scopes)
             creds = flow.run_local_server(port=0)
@@ -58,29 +59,31 @@ def get_spreadsheet(creds):
 
 # data fetching
 
-def fetch_all_data(sheet, column_idx) -> List[Dict[str, str]]:
+def fetch_all_data(sheet, column_idx: Dict[str, int]) -> List[Dict[str, str]]:
     """Retrieves all the relevant data of the spreadsheet to limit the number of requests to a minimum.
        Later : return a numpy array
 
     Args:
         sheet (_type_): googleapiclient spreadsheets object
+        column_idx (Dict[str, int]): dictionnary of column names -> column indexes
 
     Returns:
         A list of dictionnaries that represent lines 
     """
     # fetch all the lines data
-    data = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=ALL_RANGE).execute()['values']
-    
+    data = sheet.values().get(spreadsheetId=SPREADSHEET_ID,
+                              range=ALL_RANGE).execute()['values']
+
     # remove headers / columns names
     col_names = data[1]
-    
+
     # strip the headers and empty end lines
-    i=3
-    while data[i][0]:
-        i+=1
+    i = 3
+    while i < len(data) and data[i][0]:
+        i += 1
     first_empty_line = i
     data = data[2:first_empty_line]
-    
+
     # convert to dictionnary, with the relevant data
     data_dicts = []
     for line in data:
@@ -108,7 +111,7 @@ def find_column_index(columns_names, column_name: str) -> int:
 def get_all_col_indexes(sheet):
     """Returns a dictionnary of all the used columns in the spreadsheet"""
     columns_names = sheet.values().get(spreadsheetId=SPREADSHEET_ID,
-                                    range=FEATURES_LINE_RANGE).execute()['values'][0]
+                                       range=FEATURES_LINE_RANGE).execute()['values'][0]
     col_indexes = {}
     for col_name in ["Date", "Type", "Bénéficiaire", "Contact eventuel", "Description", "A1", "A2", "A3", "Sticker", "T-shirt", "Prix total", "№ facture", "Encaissement"]:
         col_indexes[col_name] = find_column_index(columns_names, col_name)
