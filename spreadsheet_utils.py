@@ -86,8 +86,8 @@ def fetch_all_data(sheet, column_idx: Dict[str, int]) -> List[Dict[str, str]]:
 
     # convert to dictionnary, with the relevant data
     data_dicts = []
-    for line in data:
-        line_dict = {}
+    for line_nb, line in enumerate(data):
+        line_dict = {'line': line_nb+3}
         for col_name in column_idx:
             col_id = column_idx[col_name]
             # if a cell is empty for a col :
@@ -108,7 +108,7 @@ def find_column_index(columns_names, column_name: str) -> int:
     raise Exception(f"Column '{column_name}' not found.")
 
 
-def get_all_col_indexes(sheet):
+def get_all_col_indexes(sheet) -> Dict[str, int]:
     """Returns a dictionnary of all the used columns in the spreadsheet"""
     columns_names = sheet.values().get(spreadsheetId=SPREADSHEET_ID,
                                        range=FEATURES_LINE_RANGE).execute()['values'][0]
