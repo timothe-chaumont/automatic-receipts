@@ -44,7 +44,7 @@ def send_receipts_by_mail(recipient_first_name: str, recipient_email: str, asso_
     for order in orders_data:
         content += f"- {order['Date']} : {order['Description']}, {order['Prix total']}\n"
 
-    content += "\nTu trouveras en pièces jointes les factures correspondantes.\n\n"\
+    content += "\nTu trouveras en pièces jointes les factures correspondantes.\nMerci de confirmer le paiement de ces facture(s) en répondant à ce mail.\n\n"\
         + f"Bonne journée,\n{CSDESIGN_TRESURER}\nTrésorier de CS Design\n{CSD_TRESURER_PHONE}"
     msg = EmailMessage()
     msg['Subject'] = subject
