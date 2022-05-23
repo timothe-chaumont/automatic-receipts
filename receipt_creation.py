@@ -22,6 +22,7 @@ VIAREZO_TRESURER = os.getenv('VR_TRESURER_NAME')
 VR_INFO = os.getenv('VR_INFO')
 VR_OFFICIAL_NAME = os.getenv('VR_OFFICIAL_NAME')
 VR_IBAN = os.getenv('VR_IBAN')
+VR_BIC = os.getenv('VR_BIC')
 VR_ACCOUNT_NUMBER = os.getenv('VR_ACCOUNT_NUMBER')
 
 # style constants
@@ -91,7 +92,7 @@ def add_footer_section(document):
         "Établir tous les chèques à l'ordre de ARCS - CS Design")
     p.add_run(
         f"\n\nDomiciliation bancaire pour les règlements par virement : {VR_ACCOUNT_NUMBER}")
-    p.add_run(f"\n\nIBAN : {VR_IBAN}")
+    p.add_run(f"\n\nIBAN : {VR_IBAN}\nBIC : {VR_BIC}")
     p.alignment = 1
     p.style = document.styles['New Footer']
 
