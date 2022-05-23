@@ -34,11 +34,16 @@ def get_asso_lines(data_dicts, asso_name):
     return asso_lines
 
 
-def send_receipts_by_mail(recipient_first_name: str, recipient_email: str, asso_name: str, receipts_paths: List[str], orders_data: List[Dict[str, str]]):
+def send_receipts_by_mail(recipient_first_name: str, recipient_email: str, asso_name: str, receipts_paths: List[str], orders_data: List[Dict[str, str]], recipient_type: str = 'asso'):
     """Sends the receipts by email to an association"""
 
     subject = "Facture(s) CS Design"
-    content = f"Hello {recipient_first_name},\n\n{len(orders_data)} prestation(s) ont été réalisées par CS Design pour l'association {asso_name} :\n"
+    content = f"Hello {recipient_first_name},\n\n{len(orders_data)} prestation(s) ont été réalisées par CS Design pour"
+
+    if recipient_type == "asso":
+        content += f" l'association {asso_name} :\n"
+    else:
+        content += f" toi :\n"
 
     # add all receipts details
     for order in orders_data:

@@ -3,6 +3,7 @@
 import argparse
 from typing import Dict, List, Union
 from tqdm import tqdm
+import re
 
 import receipt_creation as rc
 import receipt_utils as ru
@@ -52,6 +53,10 @@ def process_all_associations(spreadsheet, col_indexes:  Dict[str, int]):
         except Exception as e:
             continue
 
+    if len(processable) == 0:
+        print("No association can be processed")
+        return
+
     # 2. Print the overview
     answer = input(
         f"{len(processable)} orders can be processed. Would you like to continue? (y/n)\n"
@@ -60,7 +65,7 @@ def process_all_associations(spreadsheet, col_indexes:  Dict[str, int]):
     if answer.lower() == 'y':
         print("Let's go!")
     else:
-        print("Bye!")
+        print("Ok!")
         return
 
     # 3. Process each order
@@ -126,6 +131,108 @@ def process_all_associations(spreadsheet, col_indexes:  Dict[str, int]):
         print(f"Email sent to {tresurer_email}")
 
 
+def process_all_individuals(spreadsheet, col_indexes:  Dict[str, int]):
+    # retrieve all the data from the spreadsheet
+    data = su.fetch_all_data(spreadsheet, col_indexes)
+
+    # filter out the lines that already have a receipt or have been paid
+    filtered_data = ut.filter_orders(data)
+
+    # 1. Filter the orders that can be processed (for which we have an email address)
+    processable = []
+    # for each line,
+    for line in filtered_data:
+        # print(line['Inté / Exté'], line['Bénéficiaire'])
+        # if it is not an association
+        if line['Inté / Exté'] == 'Inté':
+            # check if an email address is provided
+            contact_data = line['Contact eventuel']
+            # regular expression supposed to match only email addresses
+            if re.match(
+                    r"^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$", contact_data
+            ):
+                # add the line to the list that can be processed
+                processable.append(line)
+
+    if len(processable) == 0:
+        print("No association can be processed")
+        return
+
+    # 2. Print the overview
+    answer = input(
+        f"{len(processable)} orders can be processed. Would you like to continue? (y/n)\n"
+    )
+
+    if answer.lower() == 'y':
+        print("Let's go!")
+    else:
+        print("Ok!")
+        return
+
+    # 3. process all orders
+
+    # retrieve the set of beneficiaries
+    beneficiaries = set(line['Bénéficiaire'] for line in processable)
+    print(beneficiaries)
+
+    for indiv_name in beneficiaries:
+        print("\nProcessing individual:", indiv_name)
+
+        # find all the lines that correspond to the association
+        indiv_orders = [order for order in processable if order['Bénéficiaire'].lower(
+        ) == indiv_name.lower()]
+
+        # store the generated receipts paths to send them by email
+        receipts_paths = []
+
+        for order in indiv_orders:
+
+            # get the order(s) details
+            total_print_price = order["Prix total"] + " TTC"
+            orders_list = []
+
+            # iterate over each type of print (A1, A2, A3, sticker, t-shirt)
+            for q_id, qtity_st in enumerate(list(order[order_key] for order_key in ("A1", "A2", "A3", "Sticker", "T-shirt"))):
+                # if there is an order
+                if qtity_st:
+                    # compute the total price of each service type
+                    element_price = int(qtity_st) * \
+                        su.SERVICES_DATA[q_id]["price"]
+                    order_dict = {"quantity": qtity_st, "designation": su.SERVICES_DATA[q_id]["designation"],
+                                  "unit price": su.format_price_string(su.SERVICES_DATA[q_id]["price"]) + " HT",
+                                  "line total price": su.format_price_string(element_price) + " TTC"}
+                    orders_list.append(order_dict)
+
+            # get the already created receipt numbers
+            sheet_receipt_names = set(
+                data[i]["№ facture"] for i in range(len(data)))
+            receipt_nb = ru.get_receipt_number(sheet_receipt_names)
+
+            recipient_info = order['Bénéficiaire']
+            docx_file_name = rc.build_receipt_path(
+                ru.RECEIPTS_PATH, ru.get_this_months_dir_name(), receipt_nb + ".docx")
+
+            rc.create_receipt_docx(
+                recipient_info, orders_list, receipt_nb, total_print_price, docx_file_name)
+            pdf_file_name = rc.build_receipt_path(
+                ru.RECEIPTS_PATH, ru.get_this_months_dir_name(), receipt_nb + ".pdf")
+
+            # export to pdf
+            rc.export_receipt_to_pdf(docx_file_name, pdf_file_name)
+            print(f" - Gerenated receipt {receipt_nb}.")
+            receipts_paths.append(pdf_file_name)
+
+            # update the spreadsheet
+            su.write_receipt_number(
+                receipt_nb, order['line'], spreadsheet, col_indexes)
+
+        # send an email with the receipts attached
+        email_address = order['Contact eventuel']
+        ut.send_receipts_by_mail(
+            recipient_info, email_address, None, receipts_paths, indiv_orders, 'individual')
+        print(f"Email sent to {email_address}")
+
+
 def main(args):
     """ Main function that reads from the spreadsheet and produces a receipt. """
 
@@ -140,6 +247,9 @@ def main(args):
 
     if args.everything_association:
         process_all_associations(spreadsheet, col_indexes)
+
+    elif args.everything_individual:
+        process_all_individuals(spreadsheet, col_indexes)
 
     elif args.summary:
         print("----- Summary of the spreadsheet -----\n")
@@ -163,7 +273,7 @@ def main(args):
                 assos[line['Bénéficiaire']] = assos.get(
                     line['Bénéficiaire'], 0) + 1
         assos = sorted(assos.items(), key=lambda x: x[1], reverse=True)
-        for i in range(10):
+        for i in range(min(5, len(assos))):
             print(f"{i+1}. {assos[i][0]} ({assos[i][1]} commandes)")
 
         # print the top individuals with the most unpaid orders
@@ -177,7 +287,7 @@ def main(args):
                     line['Bénéficiaire'], 0) + 1
         individuals = sorted(individuals.items(),
                              key=lambda x: x[1], reverse=True)
-        for i in range(5):
+        for i in range(min(5, len(individuals))):
             print(
                 f"{i+1}. {individuals[i][0]} ({individuals[i][1]} commandes)")
 
@@ -255,6 +365,8 @@ if __name__ == '__main__':
     parser.add_argument("-a", "--association", help="Process all entries for the given association.",
                         type=str, nargs="+")  # at least one word
     parser.add_argument("-ea", "--everything_association", help="Process all entries of type Association.",
+                        action='store_true')  # at least one word
+    parser.add_argument("-ei", "--everything_individual", help="Process all entries of type Inté.",
                         action='store_true')  # at least one word
     parser.add_argument("-i", "--individual", help="Process all entries for a given individual.",
                         type=str, nargs="+")  # at least one word (firstname, lastname)
