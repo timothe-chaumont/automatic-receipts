@@ -291,6 +291,21 @@ def main(args):
             print(
                 f"{i+1}. {individuals[i][0]} ({individuals[i][1]} commandes)")
 
+        # print the top externs with the most unpaid orders
+        print("\n----- Top extern -----\n")
+
+        # get the top externs
+        externs = dict()
+        for i, line in enumerate(filtered_data):
+            if line['Inté / Exté'] == 'Exté':
+                externs[line['Bénéficiaire']] = externs.get(
+                    line['Bénéficiaire'], 0) + 1
+        externs = sorted(externs.items(),
+                             key=lambda x: x[1], reverse=True)
+        for i in range(min(5, len(externs))):
+            print(
+                f"{i+1}. {externs[i][0]} ({externs[i][1]} commandes)")
+
     # if an association was given
     elif args.association:
         asso_name = " ".join(args.association)
