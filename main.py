@@ -2,8 +2,6 @@
 
 import argparse
 from typing import Dict, List, Union
-from tqdm import tqdm
-import re
 
 import receipt_creation as rc
 import receipt_utils as ru
@@ -11,7 +9,6 @@ import spreadsheet_utils as su
 import utils as ut
 
 # TODO:
-# - get the line number of each order when retrieveing the data
 # - when counting the lines for an association, only count those without a receipt
 # - add a function to list all the associations and their orders with no receipt (or not paid)
 # - add space before euro symbol receipt
@@ -31,31 +28,14 @@ def process_all_associations(spreadsheet, col_indexes:  Dict[str, int]):
     data = su.fetch_all_data(spreadsheet, col_indexes)
 
     # filter out the lines that already have a receipt or have been paid
-    filtered_data = ut.filter_orders(data)
+    filtered_data = ut.filter_processed_orders(data)
 
     # 1. Filter the orders that can be processed
-    processable = []
-    # for each line,
-    for line in filtered_data:
-        # print(line['Inté / Exté'], line['Bénéficiaire'])
-        # if it is not an association
-        if line['Inté / Exté'] != 'Asso':
-            # skip to the next order
-            continue
-        # check if the association is already in the list of associations
-        # try to get the information
-        try:
-            # asso_official_name, asso_address, tresurer_first_name, tresurer_email =
-            ru.get_asso_address(line['Bénéficiaire'])
-            # add the association to the list that can be processed
-            processable.append(line)
-        # if the information was not found, just pass to the next line
-        except Exception as e:
-            continue
+    processable = ut.filter_assos_orders(filtered_data)
 
     if len(processable) == 0:
         print("No association can be processed")
-        return
+        return None
 
     # 2. Print the overview
     answer = input(
@@ -136,27 +116,14 @@ def process_all_individuals(spreadsheet, col_indexes:  Dict[str, int]):
     data = su.fetch_all_data(spreadsheet, col_indexes)
 
     # filter out the lines that already have a receipt or have been paid
-    filtered_data = ut.filter_orders(data)
+    filtered_data = ut.filter_processed_orders(data)
 
     # 1. Filter the orders that can be processed (for which we have an email address)
-    processable = []
-    # for each line,
-    for line in filtered_data:
-        # print(line['Inté / Exté'], line['Bénéficiaire'])
-        # if it is not an association
-        if line['Inté / Exté'] == 'Inté':
-            # check if an email address is provided
-            contact_data = line['Contact eventuel']
-            # regular expression supposed to match only email addresses
-            if re.match(
-                    r"^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$", contact_data
-            ):
-                # add the line to the list that can be processed
-                processable.append(line)
+    processable = ut.filter_individuals_orders(filtered_data)
 
     if len(processable) == 0:
         print("No association can be processed")
-        return
+        return None
 
     # 2. Print the overview
     answer = input(
@@ -173,7 +140,6 @@ def process_all_individuals(spreadsheet, col_indexes:  Dict[str, int]):
 
     # retrieve the set of beneficiaries
     beneficiaries = set(line['Bénéficiaire'] for line in processable)
-    print(beneficiaries)
 
     for indiv_name in beneficiaries:
         print("\nProcessing individual:", indiv_name)
@@ -243,7 +209,7 @@ def main(args):
     # retrieve all the data from the spreadsheet
     data = su.fetch_all_data(spreadsheet, col_indexes)
     # filter out the lines that already have a receipt or have been paid
-    filtered_data = ut.filter_orders(data)
+    filtered_data = ut.filter_processed_orders(data)
 
     if args.everything_association:
         process_all_associations(spreadsheet, col_indexes)
