@@ -28,30 +28,7 @@ def filter_processed_orders(data: Dict[str, str]) -> List[Dict[str, str]]:
         if line["Type"] == "Prestation" and line["№ facture"] == "" and line["Encaissement"] == "":
             filtered_data.append(line)
     return filtered_data
-
-
-def filter_individuals_orders(filtered_data:List[Dict[str, str]]) -> List[Dict[str, str]]:
-    """Given the orders that could be processed, returns the ones that correspond to individuals
-        Args:
-            filtered_data (List[Dict[str, str]]): a list of dictionaries containing the data of the orders to process
-    """
-    # 1. Filter the orders that can be processed (for which we have an email address)
-    can_be_processed = []
-    # for each line,
-    for line in filtered_data:
-        # print(line['Inté / Exté'], line['Bénéficiaire'])
-        # if it is not an association
-        if line['Inté / Exté'] == 'Inté':
-            # check if an email address is provided
-            contact_data = line['Contact eventuel']
-            # regular expression supposed to match only email addresses
-            if re.match(
-                    r"^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$", contact_data
-            ):
-                # add the line to the list that can be processed
-                can_be_processed.append(line)
-    return can_be_processed
-
+    
 
 def filter_individuals_orders(filtered_data:List[Dict[str, str]]) -> List[Dict[str, str]]:
     """Given the orders that could be processed, returns the ones that correspond to individuals
@@ -63,7 +40,7 @@ def filter_individuals_orders(filtered_data:List[Dict[str, str]]) -> List[Dict[s
     can_be_processed = []
     # for each line,
     for line in filtered_data:
-        # print(line['Inté / Exté'], line['Bénéficiaire'])
+
         # if it is not an association
         if line['Inté / Exté'] == 'Inté':
             # check if an email address is provided
