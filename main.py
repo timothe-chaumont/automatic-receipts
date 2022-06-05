@@ -14,6 +14,52 @@ import utils as ut
 # - add space before euro symbol receipt
 
 
+def process_everything():
+    from retrieve import Retriever
+    retriever = Retriever()
+
+    # get unprocessed receipts
+    to_be_processed = retriever.get_unprocessed_orders()
+    print(len(to_be_processed), "unprocessed orders")
+
+    ## 1. process the associations
+
+    # retrieve the asso orders that could be processed
+    asso_orders = retriever.filter_by_client_type(to_be_processed, "Asso")
+    can_be_processed = retriever.filter_unknown_assos(asso_orders)
+    unprocessed_assos_names = can_be_processed['Bénéficiaire'].unique()
+    print("assos", len(can_be_processed))
+
+    # for each asso, process the orders
+    for asso_name in unprocessed_assos_names:
+        # get asso details (address, email, etc.)
+        asso_details = retriever.get_asso_details(asso_name)
+        
+        # get the orders for this asso
+        asso_orders = retriever.filter_by_recipient_name(can_be_processed, asso_name)
+
+        # process the orders
+        for order_idx, order in asso_orders.iterrows():
+            pass
+        
+            # create the receipt
+            # receipt = rc.create_receipt(order, asso_details)
+            # # save the receipt
+            # rc.save_receipt(receipt)
+
+    # # 2. process the individuals
+    # indiv_orders = retriever.filter_by_client_type(to_be_processed, "Inté")
+    # can_be_processed = retriever.filter_invalid_mails(indiv_orders)
+    # print("inté", len(can_be_processed))
+
+    # # 3. process the extern orders
+    # extern_orders = retriever.filter_by_client_type(to_be_processed, "Exté")
+    # can_be_processed = retriever.filter_invalid_mails(extern_orders)
+    # print("exté", len(can_be_processed))
+
+
+
+
 def process_all_associations(spreadsheet, col_indexes:  Dict[str, int]):
     """ For all associations-related unpaid orders, see which ones can be processed (we have enough information)
         Print an overview of what will be done
@@ -357,4 +403,5 @@ if __name__ == '__main__':
                         action='store_true')  # no arguments needed
     args = parser.parse_args()
 
-    main(args)
+    # main(args)
+    process_everything()
