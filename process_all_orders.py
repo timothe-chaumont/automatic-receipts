@@ -42,7 +42,7 @@ def main():
 
     answer = input("\nVoulez-vous continuer? (O/N)\n")
     if answer.lower() == 'o':
-        print("Let's go!")
+        print("Let's go!\n")
     else:
         print("Ok!")
         return
@@ -127,7 +127,7 @@ def main():
             recip_orders.to_dict(orient="records"), 
             recipient_first_name
         )
-        print(f"Email envoyé à {recip_name}.")
+        print(f"Email envoyé à {recip_mail} ({recip_name}).\n")
 
 if __name__ == '__main__':
     main()
