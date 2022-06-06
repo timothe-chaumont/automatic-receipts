@@ -1,5 +1,8 @@
 """ Reads, filters data from the spreadsheet and produces receipts for the unprocessed orders. """
 
+import warnings
+warnings.simplefilter(action='ignore')
+
 import pandas as pd
 
 import receipt_creation as rc
@@ -7,6 +10,7 @@ import receipt_utils as ru
 import spreadsheet_utils as su
 import utils as ut
 from retrieve import Retriever
+
 
 
 def main():
@@ -31,12 +35,12 @@ def main():
     unique_recipient_names = can_be_processed['Bénéficiaire'].unique()
 
     # print the overview and ask the user to confirm
-    print(f"{len(can_be_processed)} prestations peuvent être traitées, dont:")
+    print(f"\n{len(can_be_processed)} prestations peuvent être traitées, dont:")
     print(f" - {len(can_be_processed_asso)} pour des associations,")
     print(f" - {len(can_be_processed_indiv)} pour des étudiants,")
     print(f" - {len(can_be_processed_etern)} pour des clients extérieurs.")
 
-    answer = input("Voulez-vous continuer? (o/n)\n")
+    answer = input("\nVoulez-vous continuer? (O/N)\n")
     if answer.lower() == 'o':
         print("Let's go!")
     else:
@@ -100,7 +104,7 @@ def main():
 
             # export to pdf
             rc.export_receipt_to_pdf(docx_file_name, pdf_file_name)
-            print(f" - Gerenated receipt {receipt_nb}.")
+            print(f" - Facture {receipt_nb} exportée.")
             receipts_paths.append(pdf_file_name)
 
             # update the spreadsheet
@@ -108,7 +112,7 @@ def main():
 
         # send an email with the receipts attached
         if order["Inté / Exté"] == "Asso":
-            recip_mail = asso_details["email"]
+            recip_mail = asso_details["tresurer mail"]
             recipient_first_name = asso_details["tresurer first name"]
 
         else:
@@ -120,9 +124,10 @@ def main():
             recip_mail, 
             recip_type, 
             receipts_paths, 
-            recip_orders, 
+            recip_orders.to_dict(orient="records"), 
             recipient_first_name
         )
+        print(f"Email envoyé à {recip_name}.")
 
 if __name__ == '__main__':
     main()
