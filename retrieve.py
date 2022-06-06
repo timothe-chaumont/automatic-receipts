@@ -3,6 +3,7 @@
 
 import os
 import re
+import string
 from typing import Dict, List, Tuple, Optional
 import json
 
@@ -63,12 +64,14 @@ class Retriever():
         """
         # fetch the spreadsheet object
         service = build('sheets', 'v4', credentials=creds)
-        sheet = service.spreadsheets()
+        self.spreadsheet = service.spreadsheets()
 
         # fetch the data & convert it to a panda Dataframe
-        data = sheet.values().get(spreadsheetId=SPREADSHEET_ID,
+        data = self.spreadsheet.values().get(spreadsheetId=SPREADSHEET_ID,
                         range=ALL_RANGE).execute()['values']
         df = pd.DataFrame(data[2:], columns=data[1])
+        # set the index to the online one
+        df.index += 3
 
         # later : remove empty lines at the end 
         self.orders = df
@@ -133,8 +136,24 @@ class Retriever():
         
         raise Exception(f"{name} not found in the list of associations")
 
+    def write_receipt_number(self, receipt_nb: str, line: int) -> None:
+        """Writes the receipt number in the spreadsheet.
+
+            Args:
+                receipt_nb (str) : the receipt number
+                line (int) : the line number
+        """
+        receipt_col_letter = string.ascii_uppercase[self.orders.columns.to_list().index('№ facture')]
+        receipt_nb_cell_id = f"{receipt_col_letter}{line}"
+        self.spreadsheet.values().update(spreadsheetId=SPREADSHEET_ID,
+                            range=receipt_nb_cell_id,
+                            valueInputOption="RAW",
+                            body={"values": [[receipt_nb]]}).execute()
+
 
 if __name__ == "__main__":
     r = Retriever()
     orders = r.orders
     u_orders = r.get_unprocessed_orders()
+
+    # r.write_receipt_number("test", 200)
