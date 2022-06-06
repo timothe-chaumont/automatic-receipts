@@ -6,6 +6,7 @@ import os
 import smtplib
 from email.message import EmailMessage
 import re
+from typing_extensions import Literal
 
 import receipt_utils as ru
 
@@ -90,16 +91,17 @@ def get_asso_lines(data_dicts, asso_name):
     return asso_lines
 
 
-def send_receipts_by_mail(recipient_first_name: str, recipient_email: str, asso_name: str, receipts_paths: List[str], orders_data: List[Dict[str, str]], recipient_type: str = 'asso'):
+def send_receipts_by_mail(recipient_name, recipient_email: str, recipient_type:Literal["Asso", "Inté", "Exté"], receipts_paths: List[str], orders_data: List[Dict[str, str]], recipient_first_name = None):
     """Sends the receipts by email to an association"""
 
     subject = "Facture(s) CS Design"
-    content = f"Hello {recipient_first_name},\n\n{len(orders_data)} prestation(s) ont été réalisées par CS Design pour"
 
-    if recipient_type == "asso":
-        content += f" l'association {asso_name} :\n"
-    else:
-        content += f" toi :\n"
+    if recipient_type == "Asso":
+        content = f"Hello {recipient_first_name},\n\n{len(orders_data)} prestation(s) ont été réalisées par CS Design pour l'association {recipient_name} :\n"
+    elif recipient_type == "Exté":
+        content = f"Bonjour,\n\n{len(orders_data)} prestation(s) ont été réalisées par CentraleSupélec Design pour {recipient_name} :\n"
+    elif recipient_type == "Inté":
+        content = f"Hello,\n\n{len(orders_data)} prestation(s) ont été réalisées par CS Design pour toi :\n"
 
     # add all receipts details
     for order in orders_data:
