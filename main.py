@@ -3,6 +3,8 @@
 import argparse
 from typing import Dict, List, Union
 
+import pandas as pd
+
 import receipt_creation as rc
 import receipt_utils as ru
 import spreadsheet_utils as su
@@ -17,190 +19,67 @@ import utils as ut
 def process_everything():
     from retrieve import Retriever
     retriever = Retriever()
+    all_orders = retriever.orders
 
     # get unprocessed receipts
     to_be_processed = retriever.get_unprocessed_orders()
-    print(len(to_be_processed), "unprocessed orders")
-
-    ## 1. process the associations
+    print(f"{len(to_be_processed)} commande(s) sans facture ni paiement.")
 
     # retrieve the asso orders that could be processed
     asso_orders = retriever.filter_by_client_type(to_be_processed, "Asso")
-    can_be_processed = retriever.filter_unknown_assos(asso_orders)
-    unprocessed_assos_names = can_be_processed['Bénéficiaire'].unique()
-    print("assos", len(can_be_processed))
+    can_be_processed_asso = retriever.filter_unknown_assos(asso_orders)
+    # Same for individual & extern orders
+    valid_email_orders = retriever.filter_invalid_mails(to_be_processed)
+    can_be_processed_indiv = retriever.filter_by_client_type(valid_email_orders, "Inté")
+    can_be_processed_etern = retriever.filter_by_client_type(valid_email_orders, "Exté")
+
+    # group them into one array
+    can_be_processed = pd.concat([can_be_processed_asso, can_be_processed_indiv, can_be_processed_etern])
+    # list all the different recipientsof the orders that will be processed (to group the orders by recipient)
+    unique_recipient_names = can_be_processed['Bénéficiaire'].unique()
+
+    # print the overview and ask the user to confirm
+    print(f"{len(can_be_processed)} prestations peuvent être traitées, dont:")
+    print(f" - {len(can_be_processed_asso)} pour des associations,")
+    print(f" - {len(can_be_processed_indiv)} pour des étudiants,")
+    print(f" - {len(can_be_processed_etern)} pour des clients extérieurs.")
+
+    answer = input("Voulez-vous continuer? (o/n)\n")
+    if answer.lower() == 'o':
+        print("Let's go!")
+    else:
+        print("Ok!")
+        return
 
     # for each asso, process the orders
-    for asso_name in unprocessed_assos_names:
-        # get asso details (address, email, etc.)
-        asso_details = retriever.get_asso_details(asso_name)
+    for recip_name in unique_recipient_names:
         
-        # get the orders for this asso
-        asso_orders = retriever.filter_by_recipient_name(can_be_processed, asso_name)
+        # get the orders for this recipient
+        recip_orders = retriever.filter_by_recipient_name(can_be_processed, recip_name)
+
+        # check if it is an association or other
+        recip_type = recip_orders["Inté / Exté"].iloc[0]
+        if recip_type == "Asso":
+            # get asso details (address, email, etc.)
+            asso_details = retriever.get_asso_details(recip_name)
+            # get recipient data that will be used to create the receipt
+            # is different depending on the recipient type
+            receipt_recipient_info = asso_details["official name"] + "\n" + asso_details["address"]
+
+        # if it is an individual or an extern order
+        else:
+            receipt_recipient_info = recip_orders["Bénéficiaire"].iloc[0]
+
+        # will store the pdf receipts paths to attach them to emails
+        receipts_paths = []
 
         # process the orders
-        for order_idx, order in asso_orders.iterrows():
-            pass
-        
-            # create the receipt
-            # receipt = rc.create_receipt(order, asso_details)
-            # # save the receipt
-            # rc.save_receipt(receipt)
-
-    # # 2. process the individuals
-    # indiv_orders = retriever.filter_by_client_type(to_be_processed, "Inté")
-    # can_be_processed = retriever.filter_invalid_mails(indiv_orders)
-    # print("inté", len(can_be_processed))
-
-    # # 3. process the extern orders
-    # extern_orders = retriever.filter_by_client_type(to_be_processed, "Exté")
-    # can_be_processed = retriever.filter_invalid_mails(extern_orders)
-    # print("exté", len(can_be_processed))
-
-
-
-
-def process_all_associations(spreadsheet, col_indexes:  Dict[str, int]):
-    """ For all associations-related unpaid orders, see which ones can be processed (we have enough information)
-        Print an overview of what will be done
-        If the user wants to continue, process the orders
-
-        Args:
-            filtered_data (List[Dict[str, Union[str, int]]]): List of the associations lines from the spreadsheet that are unpaid or don't have a receipt
-            col_indexes ( Dict[str, int]): List of the column indexes of the spreadsheet
-    """
-
-    # retrieve all the data from the spreadsheet
-    data = su.fetch_all_data(spreadsheet, col_indexes)
-
-    # filter out the lines that already have a receipt or have been paid
-    filtered_data = ut.filter_processed_orders(data)
-
-    # 1. Filter the orders that can be processed
-    processable = ut.filter_assos_orders(filtered_data)
-
-    if len(processable) == 0:
-        print("No association can be processed")
-        return None
-
-    # 2. Print the overview
-    answer = input(
-        f"{len(processable)} orders can be processed. Would you like to continue? (y/n)\n"
-    )
-
-    if answer.lower() == 'y':
-        print("Let's go!")
-    else:
-        print("Ok!")
-        return
-
-    # 3. Process each order
-
-    # for each asso in the list of processable orders,
-    for asso_name in set(line['Bénéficiaire'] for line in processable):
-        print("\nProcessing association:", asso_name)
-
-        # find all the lines that correspond to the association
-        asso_orders = [order for order in processable if order['Bénéficiaire'].lower(
-        ) == asso_name.lower()]
-
-        # get the association details
-        asso_official_name, asso_address, tresurer_first_name, tresurer_email = ru.get_asso_address(
-            asso_name)
-
-        # store the paths to send them by email
-        receipts_paths = []
-
-        for asso_order in asso_orders:
-            # get the order(s) details
-            total_print_price = asso_order["Prix total"] + " TTC"
-            orders_list = []
-
-            # iterate over each type of print (A1, A2, A3, sticker, t-shirt)
-            for q_id, qtity_st in enumerate(list(asso_order[order_key] for order_key in ("A1", "A2", "A3", "Sticker", "T-shirt"))):
-                # if there is an order
-                if qtity_st:
-                    # compute the total price of each service type
-                    element_price = int(qtity_st) * \
-                        su.SERVICES_DATA[q_id]["price"]
-                    order_dict = {"quantity": qtity_st, "designation": su.SERVICES_DATA[q_id]["designation"],
-                                  "unit price": su.format_price_string(su.SERVICES_DATA[q_id]["price"]) + " HT",
-                                  "line total price": su.format_price_string(element_price) + " TTC"}
-                    orders_list.append(order_dict)
-
-            # get the already created receipt numbers
-            sheet_receipt_names = set(
-                data[i]["№ facture"] for i in range(len(data)))
-            receipt_nb = ru.get_receipt_number(sheet_receipt_names)
-
-            recipient_info = asso_official_name + "\n" + asso_address
-            docx_file_name = rc.build_receipt_path(
-                ru.RECEIPTS_PATH, ru.get_this_months_dir_name(), receipt_nb + ".docx")
-
-            rc.create_receipt_docx(
-                recipient_info, orders_list, receipt_nb, total_print_price, docx_file_name)
-            pdf_file_name = rc.build_receipt_path(
-                ru.RECEIPTS_PATH, ru.get_this_months_dir_name(), receipt_nb + ".pdf")
-
-            # export to pdf
-            rc.export_receipt_to_pdf(docx_file_name, pdf_file_name)
-            print(f" - Gerenated receipt {receipt_nb}.")
-            receipts_paths.append(pdf_file_name)
-
-            # update the spreadsheet
-            su.write_receipt_number(
-                receipt_nb, asso_order['line'], spreadsheet, col_indexes)
-
-        # send an email with the receipts attached
-        ut.send_receipts_by_mail(
-            tresurer_first_name, tresurer_email, asso_name, receipts_paths, asso_orders)
-        print(f"Email sent to {tresurer_email}")
-
-
-def process_all_individuals(spreadsheet, col_indexes:  Dict[str, int]):
-    # retrieve all the data from the spreadsheet
-    data = su.fetch_all_data(spreadsheet, col_indexes)
-
-    # filter out the lines that already have a receipt or have been paid
-    filtered_data = ut.filter_processed_orders(data)
-
-    # 1. Filter the orders that can be processed (for which we have an email address)
-    processable = ut.filter_individuals_orders(filtered_data)
-
-    if len(processable) == 0:
-        print("No association can be processed")
-        return None
-
-    # 2. Print the overview
-    answer = input(
-        f"{len(processable)} orders can be processed. Would you like to continue? (y/n)\n"
-    )
-
-    if answer.lower() == 'y':
-        print("Let's go!")
-    else:
-        print("Ok!")
-        return
-
-    # 3. process all orders
-
-    # retrieve the set of beneficiaries
-    beneficiaries = set(line['Bénéficiaire'] for line in processable)
-
-    for indiv_name in beneficiaries:
-        print("\nProcessing individual:", indiv_name)
-
-        # find all the lines that correspond to the association
-        indiv_orders = [order for order in processable if order['Bénéficiaire'].lower(
-        ) == indiv_name.lower()]
-
-        # store the generated receipts paths to send them by email
-        receipts_paths = []
-
-        for order in indiv_orders:
+        for order_idx, order in recip_orders.iterrows():
 
             # get the order(s) details
             total_print_price = order["Prix total"] + " TTC"
+
+            # will store the details of the order
             orders_list = []
 
             # iterate over each type of print (A1, A2, A3, sticker, t-shirt)
@@ -216,16 +95,14 @@ def process_all_individuals(spreadsheet, col_indexes:  Dict[str, int]):
                     orders_list.append(order_dict)
 
             # get the already created receipt numbers
-            sheet_receipt_names = set(
-                data[i]["№ facture"] for i in range(len(data)))
+            sheet_receipt_names = all_orders["№ facture"].unique()
             receipt_nb = ru.get_receipt_number(sheet_receipt_names)
 
-            recipient_info = order['Bénéficiaire']
             docx_file_name = rc.build_receipt_path(
                 ru.RECEIPTS_PATH, ru.get_this_months_dir_name(), receipt_nb + ".docx")
 
             rc.create_receipt_docx(
-                recipient_info, orders_list, receipt_nb, total_print_price, docx_file_name)
+                receipt_recipient_info, orders_list, receipt_nb, total_print_price, docx_file_name)
             pdf_file_name = rc.build_receipt_path(
                 ru.RECEIPTS_PATH, ru.get_this_months_dir_name(), receipt_nb + ".pdf")
 
@@ -235,14 +112,25 @@ def process_all_individuals(spreadsheet, col_indexes:  Dict[str, int]):
             receipts_paths.append(pdf_file_name)
 
             # update the spreadsheet
-            su.write_receipt_number(
-                receipt_nb, order['line'], spreadsheet, col_indexes)
+            retriever.write_receipt_number(receipt_nb, order_idx)
 
         # send an email with the receipts attached
-        email_address = order['Contact eventuel']
+        if order["Inté / Exté"] == "Asso":
+            recip_mail = asso_details["email"]
+            recipient_first_name = asso_details["tresurer first name"]
+
+        else:
+            recip_mail = order["Contact eventuel"]
+            recipient_first_name = None
+
         ut.send_receipts_by_mail(
-            recipient_info, email_address, None, receipts_paths, indiv_orders, 'individual')
-        print(f"Email sent to {email_address}")
+            recip_name, 
+            recip_mail, 
+            recip_type, 
+            receipts_paths, 
+            recip_orders, 
+            recipient_first_name
+        )
 
 
 def main(args):
