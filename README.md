@@ -9,3 +9,7 @@ Python script that automates the generation and sending of receipts from orders 
 3. add a _.png_ image of your association's logo in the current directory and call it _logo.png_. The image will be resized.
 4. install requirements with `pip install -r requirements.txt`
 5. run `process_all_orders.py` file. It will show you a summary of what will be done, then ask you to confirm.
+
+## How it works
+
+![Architecture diagram](/architecture_diagram.png)
