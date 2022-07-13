@@ -6,7 +6,7 @@ _It was initially designed for the student association [CSDesign](https://csdesi
 
 ## What does it do?
 1. 📥 It first **reads** the receipts data from **Google Sheets**,
-1. 📄 It then **generates the receipts** it can deal with,
+1. 📄 Then, it **generates the receipts** it can deal with,
 1. 📨 Next, the created receipts are all **sent by email** to the corresponding clients,
 1. ✏️ Finally, the online **spreadsheet** is **updated**.
 
