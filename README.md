@@ -2,14 +2,20 @@
 
 Python script that automates the generation and sending of receipts from orders data written in a Google Sheets.
 
-## Steps to generate receipts automatically
+_It was initially designed for the student association [CSDesign](https://csdesign.cs-campus.fr/)_.
 
-1. create a file named _.env_ containing the same variables as described in [example.env](/example.env).
-2. create a file named _associations_addresses.json_ containing the same variables as described in [example.associations_addresses.json](example.associations_addresses.json).
-3. add a _.png_ image of your association's logo in the current directory and call it _logo.png_. The image will be resized.
-4. install requirements with `pip install -r requirements.txt`
-5. run `process_all_orders.py` file. It will show you a summary of what will be done, then ask you to confirm.
+## To generate receipts automatically
 
-## How it works
+1. **Add** the following **files** to the root folder*:
+    - _.env_ containing the same variables as described in [example.env](/example.env).
+    -  _associations_addresses.json_ containing the same variables as described in [example.associations_addresses.json](example.associations_addresses.json).
+    -  A _.png_ image of your association's logo in the current directory and call it _logo.png_. The image will be resized.
+    -  _credentials.json_ which is provided by Google Cloud when requesting an access to Google Sheets API.
+1. **Install** the **required packages** by running `pip install -r requirements.txt` in a terminal (at the same level as the _requirements.txt_ file)
+1. **Run the script** `process_all_orders.py`. This will first show you a summary of what will be done and ask for your confirmation. It will then process all the receipts for which it is possible.
+
+* _If you are a member of CSDesign, you can ask a previous tresurer for those files_
+
+## How does it work ?
 
 ![Architecture diagram](/architecture_diagram.png)
